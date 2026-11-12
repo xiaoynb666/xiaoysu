@@ -1,6 +1,7 @@
 name: Build Manager
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main", "dev", "ci" ]
     paths:
@@ -97,6 +98,7 @@ jobs:
     needs: generate-key
     uses: ./.github/workflows/build-lkm.yml
     with:
+      package_name: com.xiaoy.su
       expected_size: ${{ needs.generate-key.outputs.expected_size || '' }}
       expected_hash: ${{ needs.generate-key.outputs.expected_hash || '' }}
     secrets: inherit
