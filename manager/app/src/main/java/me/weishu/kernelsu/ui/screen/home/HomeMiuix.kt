@@ -40,6 +40,12 @@ import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -86,6 +92,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import android.net.Uri
+import me.weishu.kernelsu.ui.component.snowfall.SnowBackground
+import me.weishu.kernelsu.ui.component.snowfall.SnowSettings
+import me.weishu.kernelsu.ui.component.snowfall.SnowflakeConfig
+import me.weishu.kernelsu.ui.component.snowfall.Snowfall
+import me.weishu.kernelsu.ui.component.snowfall.SnowfallSettingsDialog
 
 @Composable
 fun HomePagerMiuix(
@@ -98,6 +110,20 @@ fun HomePagerMiuix(
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
     val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+
+    var snowEnabled by remember { mutableStateOf(SnowSettings.enabled) }
+    var snowSpeed by remember { mutableFloatStateOf(SnowSettings.speedMultiplier) }
+    var snowAlpha by remember { mutableFloatStateOf(SnowSettings.alphaMultiplier) }
+    var snowDensity by remember { mutableIntStateOf(SnowSettings.density) }
+    var snowBgUri by remember { mutableStateOf(SnowSettings.backgroundUri) }
+    var showSnowDialog by remember { mutableStateOf(false) }
+    val snowConfig = SnowflakeConfig(
+        enabled = snowEnabled,
+        speedMultiplier = snowSpeed,
+        alphaMultiplier = snowAlpha,
+        density = snowDensity,
+    )
+    val snowBg = remember(snowBgUri) { snowBgUri?.takeIf { it.isNotBlank() }?.let(Uri::parse) }
     Scaffold(
         topBar = {
             TopBar(
@@ -109,8 +135,10 @@ fun HomePagerMiuix(
         popupHost = { },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
-        Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier) {
-            LazyColumn(
+        Box(modifier = Modifier.fillMaxSize()) {
+            SnowBackground(uri = snowBg, modifier = Modifier.fillMaxSize())
+            Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop).fillMaxSize() else Modifier.fillMaxSize()) {
+                LazyColumn(
                 modifier = Modifier
                     .fillMaxHeight()
                     .scrollEndHaptic()
@@ -172,6 +200,7 @@ fun HomePagerMiuix(
                         )
                         SupportLinks(
                             onOpenUrl = actions.onOpenUrl,
+                            onSnowSettingsClick = { showSnowDialog = true },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(
@@ -183,7 +212,18 @@ fun HomePagerMiuix(
                     }
                 }
             }
+            Snowfall(config = snowConfig, modifier = Modifier.fillMaxSize())
         }
+    }
+    if (showSnowDialog) {
+        SnowfallSettingsDialog(onDismiss = {
+            showSnowDialog = false
+            snowEnabled = SnowSettings.enabled
+            snowSpeed = SnowSettings.speedMultiplier
+            snowAlpha = SnowSettings.alphaMultiplier
+            snowDensity = SnowSettings.density
+            snowBgUri = SnowSettings.backgroundUri
+        })
     }
 }
 
@@ -435,6 +475,7 @@ private fun StatusCard(
 @Composable
 private fun SupportLinks(
     onOpenUrl: (String) -> Unit,
+    onSnowSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val learnMoreUrl = stringResource(R.string.home_learn_kernelsu_url)
@@ -452,6 +493,19 @@ private fun SupportLinks(
                 )
             },
             onClick = { onOpenUrl(learnMoreUrl) },
+        )
+        ArrowPreference(
+            title = "雪花飘落设置",
+            summary = "调整速度、透明度、数量及自定义背景",
+            startAction = {
+                Icon(
+                    imageVector = Icons.Filled.FilterList,
+                    contentDescription = "雪花飘落设置",
+                    modifier = Modifier.padding(end = 6.dp),
+                    tint = colorScheme.onBackground,
+                )
+            },
+            onClick = onSnowSettingsClick,
         )
     }
 }
